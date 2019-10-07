@@ -75,7 +75,7 @@ class BadgerBot:
         x = 0
         while True:
             x = x + 1
-            if x == 5:
+            if x == 9:
                 self.player_name = "Unknown"
                 return
             line = self.get_next_line()
@@ -86,6 +86,22 @@ class BadgerBot:
 
 
     def process_line(self, line):
+        insult_list = ["telepaths:", "gossips:", "auctions:", "Broadcast from"]
+        if "into the room" in line:
+            self.process_action(line)
+            return
+        for comm in insult_list:
+            if comm in line:
+                self.process_insult(line)
+                return
+
+    def process_action(self, line):
+        victim = line.split()[0].lstrip()
+        message = random.choice(self.actions) % (victim)
+        self.send(message)
+
+
+    def process_insult(self, line):
         talk_style = None
         word_list = []
         words = line.split(" ")
@@ -102,18 +118,25 @@ class BadgerBot:
             talk_style = "/%s " % victim
         elif word_list[1] == "says," and victim is not "You":
             talk_style = "."
-        elif word_list[0] == "Broadcast" and word_list[2] is not self.player_name:
-            talk_style = "br "
-            victim = word_list[2]
+        elif word_list[0] == "Broadcast":
+            victim = word_list[2].lstrip()
+            if victim != self.player_name:
+                talk_style = "br "
+                victim = word_list[2].lstrip()
         if talk_style != None:
             message = random.choice(self.insults) % (victim)
             self.send(talk_style + message)
-    
+
+
     def send(self, message):
         if (int(time()) + self.talk_delay) >= self.last_send:
-            self.terminal.Send(message)
+            self.terminal.Send(message + "\n")
             self.last_send = int(time())
 
+
+###################################
+# Main loop
+###################################
 def main():
     app = BadgerBot(crt)
     crt.Screen.Send("." + app.app_name + "\n")
