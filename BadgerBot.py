@@ -16,7 +16,7 @@ class BadgerBot:
         """
         Initialize the application and load the configurations from disk.
         """
-
+        self.crt = crt
         self.terminal = crt.Screen
         self.tab = crt.GetScriptTab()
         self.tab.Screen.IgnoreEscape = True
@@ -32,8 +32,6 @@ class BadgerBot:
         self.player_name = None
 
         self.last_send = 0
-        self.talk_queue = []
-        self.talk_queue_size = int(self.config.get('DEFAULTS', 'TalkQueueSize'))
         self.talk_delay = int(self.config.get('DEFAULTS', 'TalkDelay'))
         self.insults_enabled = bool(self.config.get('DEFAULTS', 'InsultsEnabled'))
         self.insults = self.get_list(self.config.get('DEFAULTS', 'InsultsConfig'))
@@ -71,24 +69,6 @@ class BadgerBot:
         return self.strip_statline(self.tab.Screen.ReadString("\n"))
 
 
-    # send basically just adds the output to the output queue.
-    # the queue is just set the throttle the bot based on the 
-    # talk_delay setting.  
-    def send(self, message):
-        # Send message to terminal
-        if len(self.talk_queue) >= 10:
-            self.terminal.Send("Slow down! Action not queued.")
-        else:
-            self.talk_queue.insert(0, message + "\n")
-
-    # Process the talk queue.
-    def process_queue(self):
-        if int(time()) > (self.last_send + self.talk_delay):
-            if len(self.talk_queue) > 0:
-                self.terminal.Send(self.talk_queue.pop())
-                self.last_send = time()
-
-
     # Get the player running the bot's name
     def get_badger_player_name(self):
         self.terminal.Send("st\n")
@@ -101,7 +81,7 @@ class BadgerBot:
             line = self.get_next_line()
             if "Name:" in line:
                 words = line.split(" ")
-                self.player_name = words[1]
+                self.player_name = words[1].lstrip()
                 return
 
 
@@ -112,15 +92,15 @@ class BadgerBot:
         for word in words:
             word_list.append(word.lstrip())
         victim = word_list[0].lstrip()
-        if len(word_list) < 3:
+        if len(word_list) < 3 or word_list[0] == self.player_name:
             return
-        if word_list[1] == "gossips:" and word_list[0] is not self.player_name:
+        if word_list[1] == "gossips:" and victim is not self.player_name:
             talk_style = "gos "
-        elif word_list[1] == "auctions:" and word_list[0] is not self.player_name:
+        elif word_list[1] == "auctions:" and victim is not self.player_name:
             talk_style = "auc "
         elif word_list[1] == "telepaths:":
             talk_style = "/%s " % victim
-        elif word_list[1] == "says," and word_list[0] is not "You":
+        elif word_list[1] == "says," and victim is not "You":
             talk_style = "."
         elif word_list[0] == "Broadcast" and word_list[2] is not self.player_name:
             talk_style = "br "
@@ -128,14 +108,19 @@ class BadgerBot:
         if talk_style != None:
             message = random.choice(self.insults) % (victim)
             self.send(talk_style + message)
+    
+    def send(self, message):
+        if (int(time()) + self.talk_delay) >= self.last_send:
+            self.terminal.Send(message)
+            self.last_send = int(time())
 
 def main():
     app = BadgerBot(crt)
-    #crt.Screen.Send("." + app.app_name + "\n")
+    crt.Screen.Send("." + app.app_name + "\n")
     app.get_badger_player_name()
     while True:
         app.process_line(app.get_next_line())
-        app.process_queue()
+
 
 
 main()
