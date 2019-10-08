@@ -37,6 +37,7 @@ class BadgerBot:
         self.insults = self.get_list(self.config.get('DEFAULTS', 'InsultsConfig'))
         self.actions_enabled = bool(self.config.get('DEFAULTS', 'ActionsEnabled'))
         self.actions = self.get_list(self.config.get('DEFAULTS', 'ActionsConfig'))
+        self.run()
 
 
     def get_list(self, config_file):
@@ -74,10 +75,6 @@ class BadgerBot:
         self.terminal.Send("st\n")
         x = 0
         while True:
-            x = x + 1
-            if x == 9:
-                self.player_name = "Unknown"
-                return
             line = self.get_next_line()
             if "Name:" in line:
                 words = line.split(" ")
@@ -133,21 +130,12 @@ class BadgerBot:
             self.terminal.Send(message + "\n")
             self.last_send = int(time())
 
+    # Application main loop.
+    def run(self):
+        self.terminal.Send("." + self.app_name + "\n")
+        self.get_badger_player_name()
+        while True:
+            self.process_line(self.get_next_line())
 
-###################################
-# Main loop
-###################################
-def main():
-    app = BadgerBot(crt)
-    crt.Screen.Send("." + app.app_name + "\n")
-    app.get_badger_player_name()
-    while True:
-        app.process_line(app.get_next_line())
-
-
-
-main()
-
-
-
-
+# Start the application
+app = BadgerBot(crt)
