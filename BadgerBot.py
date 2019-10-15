@@ -83,6 +83,10 @@ class BadgerBot:
 
 
     def process_line(self, line):
+        if "just entered the Realm." in line:
+            self.process_enters_the_realm(line)
+            return
+
         insult_list = ["telepaths:", "gossips:", "auctions:", "Broadcast from"]
         if "into the room" in line:
             self.process_action(line)
@@ -91,6 +95,11 @@ class BadgerBot:
             if comm in line:
                 self.process_insult(line)
                 return
+
+    def process_enters_the_realm(self, line):
+        victim = line.split()[0].lstrip()
+        message = "gos %s eats a butthole!" % (victim)
+        self.send(message)
 
     def process_action(self, line):
         victim = line.split()[0].lstrip()
